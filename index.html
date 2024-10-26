@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebRTC Sesli Arama</title>
+</head>
+<body>
+    <h1>WebRTC Sesli Arama Demo</h1>
+    <button onclick="startCall()">Aramayı Başlat</button>
+
+    <script>
+        let peerConnection;
+        const ws = new WebSocket("ws://localhost:8002/ws");
+
+        async function startCall() {
+            // Mikrofon akışını al
+            const localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            peerConnection = new RTCPeerConnection();
+
+            // Ses akışını peer bağlantısına ekle
+            localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+            // WebSocket mesajlarını dinle
+            ws.onmessage = async (event) => {
+                const message = JSON.parse(event.data);
+
+                if (message.offer) {
+                    await peerConnection.setRemoteDescription(new RTCSessionDescription(message.offer));
+                    const answer = await peerConnection.createAnswer();
+                    await peerConnection.setLocalDescription(answer);
+                    ws.send(JSON.stringify({ answer }));
+                } else if (message.answer) {
+                    await peerConnection.setRemoteDescription(new RTCSessionDescription(message.answer));
+                } else if (message.candidate) {
+                    await peerConnection.addIceCandidate(new RTCIceCandidate(message.candidate));
+                }
+            };
+
+            // ICE candidate'leri WebSocket ile gönder
+            peerConnection.onicecandidate = (event) => {
+                if (event.candidate) {
+                    ws.send(JSON.stringify({ candidate: event.candidate }));
+                }
+            };
+
+            // Bağlantı teklifi oluştur
+            const offer = await peerConnection.createOffer();
+            await peerConnection.setLocalDescription(offer);
+            ws.send(JSON.stringify({ offer }));
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket İstemcisi</title>
+</head>
+<body>
+    <h1>WebSocket İstemcisi</h1>
+    <input type="text" id="messageInput" placeholder="Mesajınızı yazın...">
+    <button onclick="sendMessage()">Gönder</button>
+    <div id="messages"></div>
+
+    <script>
+        const ws = new WebSocket("ws://localhost:8001/ws");
+
+        ws.onmessage = function(event) {
+            const messagesDiv = document.getElementById("messages");
+            messagesDiv.innerHTML += `<p>${event.data}</p>`;
+        };
+
+        function sendMessage() {
+            const messageInput = document.getElementById("messageInput");
+            const message = messageInput.value;
+            ws.send(message);
+            messageInput.value = "";
+        }
+    </script>
+</body>
+</html>
